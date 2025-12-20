@@ -1,4 +1,6 @@
-kagglehub
-pandas
-dash
+faicons
+shiny
+shinywidgets
 plotly
+pandas
+ridgeplot
