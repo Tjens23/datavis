@@ -2,89 +2,96 @@ import faicons as fa
 import plotly.express as px
 
 # Load data and compute static values
-from shared import app_dir, tips
+from shared import app_dir, earthquakes
 from shinywidgets import render_plotly
 
 from shiny import reactive, render
 from shiny.express import input, ui
 
-bill_rng = (min(tips.total_bill), max(tips.total_bill))
+mag_rng = (earthquakes.magnitude.min(), earthquakes.magnitude.max())
+depth_rng = (earthquakes.depth.min(), earthquakes.depth.max())
 
 # Add page title and sidebar
-ui.page_opts(title="Restaurant tipping", fillable=True)
+ui.page_opts(title="Recent Earthquakes", fillable=True)
 
 with ui.sidebar(open="desktop"):
     ui.input_slider(
-        "total_bill",
-        "Bill amount",
-        min=bill_rng[0],
-        max=bill_rng[1],
-        value=bill_rng,
-        pre="$",
+        "magnitude",
+        "Magnitude",
+        min=mag_rng[0],
+        max=mag_rng[1],
+        value=mag_rng,
+        step=0.1,
+    )
+    ui.input_slider(
+        "depth",
+        "Depth (km)",
+        min=depth_rng[0],
+        max=depth_rng[1],
+        value=depth_rng,
+        step=1,
     )
     ui.input_checkbox_group(
-        "time",
-        "Food service",
-        ["Lunch", "Dinner"],
-        selected=["Lunch", "Dinner"],
+        "mag_type",
+        "Magnitude Type",
+        earthquakes.magType.unique().tolist()[:5],
+        selected=earthquakes.magType.unique().tolist()[:5],
         inline=True,
     )
     ui.input_action_button("reset", "Reset filter")
 
 # Add main content
 ICONS = {
-    "user": fa.icon_svg("user", "regular"),
-    "wallet": fa.icon_svg("wallet"),
-    "currency-dollar": fa.icon_svg("dollar-sign"),
+    "earth": fa.icon_svg("earth-americas"),
+    "gauge": fa.icon_svg("gauge-high"),
+    "arrows": fa.icon_svg("arrows-down-to-people"),
     "ellipsis": fa.icon_svg("ellipsis"),
 }
 
 with ui.layout_columns(fill=False):
-    with ui.value_box(showcase=ICONS["user"]):
-        "Total tippers"
+    with ui.value_box(showcase=ICONS["earth"]):
+        "Total earthquakes"
 
         @render.express
-        def total_tippers():
-            tips_data().shape[0]
+        def total_earthquakes():
+            earthquake_data().shape[0]
 
-    with ui.value_box(showcase=ICONS["wallet"]):
-        "Average tip"
+    with ui.value_box(showcase=ICONS["gauge"]):
+        "Average magnitude"
 
         @render.express
-        def average_tip():
-            d = tips_data()
+        def average_magnitude():
+            d = earthquake_data()
             if d.shape[0] > 0:
-                perc = d.tip / d.total_bill
-                f"{perc.mean():.1%}"
+                f"{d.magnitude.mean():.2f}"
 
-    with ui.value_box(showcase=ICONS["currency-dollar"]):
-        "Average bill"
+    with ui.value_box(showcase=ICONS["arrows"]):
+        "Average depth"
 
         @render.express
-        def average_bill():
-            d = tips_data()
+        def average_depth():
+            d = earthquake_data()
             if d.shape[0] > 0:
-                bill = d.total_bill.mean()
-                f"${bill:.2f}"
+                f"{d.depth.mean():.1f} km"
 
 
 with ui.layout_columns(col_widths=[6, 6, 12]):
     with ui.card(full_screen=True):
-        ui.card_header("Tips data")
+        ui.card_header("Earthquake data")
 
         @render.data_frame
         def table():
-            return render.DataGrid(tips_data())
+            return render.DataGrid(earthquake_data())
 
     with ui.card(full_screen=True):
         with ui.card_header(class_="d-flex justify-content-between align-items-center"):
-            "Total bill vs tip"
+            "Magnitude vs Depth"
             with ui.popover(title="Add a color variable", placement="top"):
                 ICONS["ellipsis"]
                 ui.input_radio_buttons(
                     "scatter_color",
                     None,
-                    ["none", "sex", "smoker", "day", "time"],
+                    ["none", "magType", "net", "status"],
                     inline=True,
                 )
 
@@ -92,41 +99,41 @@ with ui.layout_columns(col_widths=[6, 6, 12]):
         def scatterplot():
             color = input.scatter_color()
             return px.scatter(
-                tips_data(),
-                x="total_bill",
-                y="tip",
+                earthquake_data(),
+                x="magnitude",
+                y="depth",
                 color=None if color == "none" else color,
-                trendline="lowess",
+                labels={"magnitude": "Magnitude", "depth": "Depth (km)"},
+                hover_data=["place", "datetime"],
             )
 
     with ui.card(full_screen=True):
         with ui.card_header(class_="d-flex justify-content-between align-items-center"):
-            "Tip percentages"
-            with ui.popover(title="Add a color variable"):
+            "Magnitude distribution"
+            with ui.popover(title="Split by variable"):
                 ICONS["ellipsis"]
                 ui.input_radio_buttons(
-                    "tip_perc_y",
+                    "mag_dist_y",
                     "Split by:",
-                    ["sex", "smoker", "day", "time"],
-                    selected="day",
+                    ["magType", "net", "status"],
+                    selected="magType",
                     inline=True,
                 )
 
         @render_plotly
-        def tip_perc():
+        def mag_distribution():
             from ridgeplot import ridgeplot
 
-            dat = tips_data()
-            dat["percent"] = dat.tip / dat.total_bill
-            yvar = input.tip_perc_y()
+            dat = earthquake_data()
+            yvar = input.mag_dist_y()
             uvals = dat[yvar].unique()
 
-            samples = [[dat.percent[dat[yvar] == val]] for val in uvals]
+            samples = [[dat.magnitude[dat[yvar] == val]] for val in uvals]
 
             plt = ridgeplot(
                 samples=samples,
                 labels=uvals,
-                bandwidth=0.01,
+                bandwidth=0.1,
                 colorscale="viridis",
                 colormode="row-index",
             )
@@ -148,15 +155,18 @@ ui.include_css(app_dir / "styles.css")
 
 
 @reactive.calc
-def tips_data():
-    bill = input.total_bill()
-    idx1 = tips.total_bill.between(bill[0], bill[1])
-    idx2 = tips.time.isin(input.time())
-    return tips[idx1 & idx2]
+def earthquake_data():
+    mag = input.magnitude()
+    depth = input.depth()
+    idx1 = earthquakes.magnitude.between(mag[0], mag[1])
+    idx2 = earthquakes.depth.between(depth[0], depth[1])
+    idx3 = earthquakes.magType.isin(input.mag_type())
+    return earthquakes[idx1 & idx2 & idx3]
 
 
 @reactive.effect
 @reactive.event(input.reset)
 def _():
-    ui.update_slider("total_bill", value=bill_rng)
-    ui.update_checkbox_group("time", selected=["Lunch", "Dinner"])
+    ui.update_slider("magnitude", value=mag_rng)
+    ui.update_slider("depth", value=depth_rng)
+    ui.update_checkbox_group("mag_type", selected=earthquakes.magType.unique().tolist()[:5])
