@@ -7,233 +7,21 @@ import numpy as np
 
 # Load data and compute static values
 from shared import app_dir, earthquakes
+from map import build_earthquake_map
 from shinywidgets import render_plotly
 from shinywidgets import render_widget
 
 from shiny import reactive, render
 from shiny.express import input, ui
 
-mag_rng = (earthquakes.magnitude.min(), earthquakes.magnitude.max())
-depth_rng = (earthquakes.depth.min(), earthquakes.depth.max())
-
-# Add page title and sidebar
-ui.page_opts(title="Recent Earthquakes", fillable=True)
-
-with ui.sidebar(open="desktop"):
-    ui.input_slider(
-        "magnitude",
-        "Magnitude",
-        min=mag_rng[0],
-        max=mag_rng[1],
-        value=mag_rng,
-        step=0.1,
-    )
-    ui.input_slider(
-        "depth",
-        "Depth (km)",
-        min=depth_rng[0],
-        max=depth_rng[1],
-        value=depth_rng,
-        step=1,
-    )
-    ui.input_checkbox_group(
-        "mag_type",
-        "Magnitude Type",
-        earthquakes.magType.unique().tolist()[:5],
-        selected=earthquakes.magType.unique().tolist()[:5],
-        inline=True,
-    )
-    ui.input_action_button("reset", "Reset filter")
-
-# Add main content
-ICONS = {
-    "earth": fa.icon_svg("earth-americas"),
-    "gauge": fa.icon_svg("gauge-high"),
-    "arrows": fa.icon_svg("arrows-down-to-people"),
-    "ellipsis": fa.icon_svg("ellipsis"),
-}
-
-with ui.layout_columns(fill=False):
-    with ui.value_box(showcase=ICONS["earth"]):
-        "Total earthquakes"
-
-        @render.express
-        def total_earthquakes():
-            earthquake_data().shape[0]
-
-    with ui.value_box(showcase=ICONS["gauge"]):
-        "Average magnitude"
-
-        @render.express
-        def average_magnitude():
-            d = earthquake_data()
-            if d.shape[0] > 0:
-                f"{d.magnitude.mean():.2f}"
-
-    with ui.value_box(showcase=ICONS["arrows"]):
-        "Average depth"
-
-        @render.express
-        def average_depth():
-            d = earthquake_data()
-            if d.shape[0] > 0:
-                f"{d.depth.mean():.1f} km"
-
-
-with ui.layout_columns(col_widths=[6, 6, 12]):
-    with ui.card(full_screen=True):
-        ui.card_header("Earthquake data")
-
-        @render.data_frame
-        def table():
-            return render.DataGrid(earthquake_data())
-
-    with ui.card(full_screen=True):
-        with ui.card_header(class_="d-flex justify-content-between align-items-center"):
-            "Magnitude vs Depth"
-            with ui.popover(title="Add a color variable", placement="top"):
-                ICONS["ellipsis"]
-                ui.input_radio_buttons(
-                    "scatter_color",
-                    None,
-                    ["none", "magType", "net"],
-                    inline=True,
-                )
-
-        @render.ui
-        def scatterplot():
-            import io
-            import base64
-            from shiny import ui as ui_module
-            
-            data = earthquake_data()
-            color_var = input.scatter_color()
-            
-            if len(data) == 0:
-                return ui_module.HTML("<p>No data to display</p>")
-            
-            # Sort data by datetime for animation
-            data = data.sort_values('datetime').reset_index(drop=True)
-            
-            fig, ax = plt.subplots(figsize=(10, 6))
-            
-            # Set up the plot limits and labels
-            ax.set_xlim(data['magnitude'].min() - 0.5, data['magnitude'].max() + 0.5)
-            ax.set_ylim(data['depth'].min() - 10, data['depth'].max() + 10)
-            ax.set_xlabel('Magnitude', fontsize=12)
-            ax.set_ylabel('Depth (km)', fontsize=12)
-            ax.grid(True, alpha=0.3)
-            
-            # Prepare color mapping
-            if color_var != "none" and color_var in data.columns:
-                unique_vals = data[color_var].unique()
-                colors = plt.cm.viridis(np.linspace(0, 1, len(unique_vals)))
-                color_map = dict(zip(unique_vals, colors))
-                point_colors = [color_map[val] for val in data[color_var]]
-                
-                # Add legend
-                for i, val in enumerate(unique_vals):
-                    ax.scatter([], [], c=[colors[i]], label=str(val), s=50)
-                ax.legend(loc='upper right', fontsize=8)
-            else:
-                point_colors = ['#1f77b4'] * len(data)
-            
-            # Initialize scatter plot
-            scatter = ax.scatter([], [], alpha=0.6, s=50)
-            time_text = ax.text(0.02, 0.98, '', transform=ax.transAxes, 
-                              fontsize=10, verticalalignment='top',
-                              bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-            
-            # Animation function
-            def animate(frame):
-                # Show earthquakes up to this frame
-                idx = min(frame * 5, len(data))  # Show 5 points per frame
-                current_data = data.iloc[:idx]
-                
-                if len(current_data) > 0:
-                    scatter.set_offsets(np.c_[current_data['magnitude'], current_data['depth']])
-                    scatter.set_color([point_colors[i] for i in range(idx)])
-                    
-                    # Update time text
-                    latest_time = current_data['datetime'].iloc[-1]
-                    time_text.set_text(f'Up to: {latest_time.strftime("%Y-%m-%d %H:%M")}')
-                
-                return scatter, time_text
-            
-            # Create animation
-            frames = min(len(data) // 5 + 1, 100)  # Limit to 100 frames max
-            anim = animation.FuncAnimation(fig, animate, frames=frames,
-                                         interval=100, blit=True, repeat=True)
-            
-            plt.tight_layout()
-            
-            # Save animation as GIF to a temporary file
-            import tempfile
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.gif') as tmp:
-                tmp_path = tmp.name
-            
-            anim.save(tmp_path, writer='pillow', fps=10, dpi=100)
-            plt.close(fig)
-            
-            # Read the GIF file and encode as base64
-            with open(tmp_path, 'rb') as f:
-                gif_data = f.read()
-            
-            # Clean up temp file
-            import os
-            os.unlink(tmp_path)
-            
-            # Encode as base64 and embed in img tag
-            gif_base64 = base64.b64encode(gif_data).decode('utf-8')
-            html = f'<img src="data:image/gif;base64,{gif_base64}" style="max-width:100%; height:auto;" />'
-            
-            return ui_module.HTML(html)
-
-    with ui.card(full_screen=True):
-        with ui.card_header(class_="d-flex justify-content-between align-items-center"):
-            "Magnitude distribution"
-            with ui.popover(title="Split by variable"):
-                ICONS["ellipsis"]
-                ui.input_radio_buttons(
-                    "mag_dist_y",
-                    "Split by:",
-                    ["magType", "net", "status"],
-                    selected="magType",
-                    inline=True,
-                )
-
-        @render_plotly
-        def mag_distribution():
-            from ridgeplot import ridgeplot
-
-            dat = earthquake_data()
-            yvar = input.mag_dist_y()
-            uvals = dat[yvar].unique()
-
-            samples = [[dat.magnitude[dat[yvar] == val]] for val in uvals]
-
-            plt = ridgeplot(
-                samples=samples,
-                labels=uvals,
-                bandwidth=0.1,
-                colorscale="viridis",
-                colormode="row-index",
-            )
-
-            plt.update_layout(
-                legend=dict(
-                    orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5
-                )
-            )
-
-            return plt
-
-
-ui.include_css(app_dir / "styles.css")
-
 # --------------------------------------------------------
 # Reactive calculations and effects
 # --------------------------------------------------------
+
+mag_rng = (earthquakes.magnitude.min(), earthquakes.magnitude.max())
+depth_rng = (earthquakes.depth.min(), earthquakes.depth.max())
+manual_pdf_path = "manual.pdf"  # Served from the app's www/ directory
+raw_columns = earthquakes.columns.tolist()
 
 
 @reactive.calc
@@ -246,9 +34,223 @@ def earthquake_data():
     return earthquakes[idx1 & idx2 & idx3]
 
 
+
+
 @reactive.effect
 @reactive.event(input.reset)
 def _():
     ui.update_slider("magnitude", value=mag_rng)
     ui.update_slider("depth", value=depth_rng)
     ui.update_checkbox_group("mag_type", selected=earthquakes.magType.unique().tolist()[:5])
+
+
+@reactive.effect
+@reactive.event(input.raw_select_all_btn)
+def _select_all_raw_columns():
+    ui.update_checkbox_group("raw_columns", selected=raw_columns)
+
+
+@reactive.effect
+@reactive.event(input.raw_clear_all_btn)
+def _clear_all_raw_columns():
+    ui.update_checkbox_group("raw_columns", selected=[])
+
+
+@reactive.effect
+def _update_raw_toggle_label():
+    sel = list(input.raw_columns() or raw_columns)
+    ui.update_action_button("raw_toggle", label=f"{len(sel)} of {len(raw_columns)} columns \u25be")
+
+
+# --------------------------------------------------------
+
+# Add page title
+ui.page_opts(title="", fillable=False)
+
+ICONS = {
+    "earth": fa.icon_svg("earth-americas"),
+    "gauge": fa.icon_svg("gauge-high"),
+    "arrows": fa.icon_svg("arrows-down-to-people"),
+    "ellipsis": fa.icon_svg("ellipsis"),
+    "chevron": fa.icon_svg("chevron-down"),
+}
+
+with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
+    with ui.nav_panel("Dashboard"):
+        with ui.layout_columns(col_widths=[3, 9], gap="lg"):
+            with ui.card(full_screen=True):
+                ui.card_header("Filters")
+                ui.input_slider(
+                    "magnitude",
+                    "Magnitude",
+                    min=mag_rng[0],
+                    max=mag_rng[1],
+                    value=mag_rng,
+                    step=0.1,
+                )
+                ui.input_slider(
+                    "depth",
+                    "Depth (km)",
+                    min=depth_rng[0],
+                    max=depth_rng[1],
+                    value=depth_rng,
+                    step=1,
+                )
+                ui.input_checkbox_group(
+                    "mag_type",
+                    "Magnitude Type",
+                    earthquakes.magType.unique().tolist()[:5],
+                    selected=earthquakes.magType.unique().tolist()[:5],
+                    inline=True,
+                )
+                ui.input_action_button("reset", "Reset filter")
+
+            with ui.div(class_="d-flex flex-column gap-4 w-100"):
+                with ui.layout_columns(fill=False):
+                    with ui.value_box(showcase=ICONS["earth"], style="height: 70px"):
+                        "Total earthquakes"
+
+                        @render.express
+                        def total_earthquakes():
+                            earthquake_data().shape[0]
+
+                    with ui.value_box(showcase=ICONS["gauge"], style="min-height: 140px"):
+                        "Average magnitude"
+
+                        @render.express
+                        def average_magnitude():
+                            d = earthquake_data()
+                            if d.shape[0] > 0:
+                                f"{d.magnitude.mean():.2f}"
+
+                    with ui.value_box(showcase=ICONS["arrows"], style="min-height: 140px"):
+                        "Average depth"
+
+                        @render.express
+                        def average_depth():
+                            d = earthquake_data()
+                            if d.shape[0] > 0:
+                                f"{d.depth.mean():.1f} km"
+
+                with ui.layout_columns(col_widths=[6, 6, 12]):
+                    with ui.card(full_screen=True):
+                        with ui.card_header(class_="d-flex justify-content-between align-items-center"):
+                            "Magnitude vs Depth"
+                            with ui.popover(title="Add a color variable", placement="top"):
+                                ICONS["ellipsis"]
+                                ui.input_radio_buttons(
+                                    "scatter_color",
+                                    None,
+                                    ["none", "magType", "net"],
+                                    inline=True,
+                                )
+
+                        @render_plotly
+                        def scatterplot():
+                            color = input.scatter_color()
+                            return px.scatter(
+                                earthquake_data(),
+                                x="magnitude",
+                                y="depth",
+                                color=None if color == "none" else color,
+                                labels={"magnitude": "Magnitude", "depth": "Depth (km)"},
+                                hover_data=["place", "datetime"],
+                            )
+
+                    with ui.card(full_screen=True):
+                        with ui.card_header(class_="d-flex justify-content-between align-items-center"):
+                            "Magnitude distribution"
+                            with ui.popover(title="Split by variable"):
+                                ICONS["ellipsis"]
+                                ui.input_radio_buttons(
+                                    "mag_dist_y",
+                                    "Split by:",
+                                    ["magType", "net", "status"],
+                                    selected="magType",
+                                    inline=True,
+                                )
+
+                        @render_plotly
+                        def mag_distribution():
+                            from ridgeplot import ridgeplot
+
+                            dat = earthquake_data()
+                            yvar = input.mag_dist_y()
+                            uvals = dat[yvar].unique()
+
+                            samples = [[dat.magnitude[dat[yvar] == val]] for val in uvals]
+
+                            plt = ridgeplot(
+                                samples=samples,
+                                labels=uvals,
+                                bandwidth=0.1,
+                                colorscale="viridis",
+                                colormode="row-index",
+                            )
+
+                            plt.update_layout(
+                                legend=dict(
+                                    orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5
+                                )
+                            )
+
+                            return plt
+
+                with ui.layout_columns(col_widths=[12]):
+                    with ui.card(full_screen=True, style="aspect-ratio: 1; min-height: 600px"):
+                        ui.card_header("Earthquake map")
+                        with ui.card_body(style="height: 100%"):
+                            @render_plotly
+                            def earthquake_map():
+                                return build_earthquake_map(earthquake_data())
+
+    with ui.nav_panel("Raw data"):
+        with ui.card(full_screen=True):
+            with ui.card_header(class_="d-flex justify-content-between align-items-center", style="position: relative;"):
+                "Raw data (unfiltered)"
+                ui.input_action_button(
+                    "raw_toggle",
+                    f"{len(raw_columns)} of {len(raw_columns)} columns \u25be",
+                    class_="btn btn-link text-primary p-0",
+                )
+                with ui.panel_conditional("input.raw_toggle % 2 === 1"):
+                    ui.div(
+                        {
+                            "style": "position: absolute; right: 0; top: calc(100% + 0.5rem); z-index: 2000;",
+                            "class": "shadow-sm border bg-white p-3 rounded-3",
+                        },
+                        ui.div(
+                            ui.input_action_button("raw_select_all_btn", "Select all", class_="btn btn-sm btn-outline-primary"),
+                            ui.input_action_button("raw_clear_all_btn", "Clear", class_="btn btn-sm btn-outline-secondary"),
+                            class_="d-flex gap-2 mb-2",
+                        ),
+                        ui.div(
+                            ui.input_checkbox_group(
+                                "raw_columns",
+                                None,
+                                choices=raw_columns,
+                                selected=raw_columns,
+                                inline=False,
+                            ),
+                            style="max-height: 240px; width: 260px; overflow-y: auto;",
+                        ),
+                    )
+
+            @render.data_frame
+            def raw_table():
+                cols = list(input.raw_columns() or raw_columns)
+                return render.DataGrid(earthquakes[cols])
+    
+    with ui.nav_panel("Manual"):
+        with ui.card(full_screen=False):
+            ui.card_header("Download manual")
+            ui.markdown("Get the PDF version of the manual below.")
+            ui.tags.a(
+                "Download PDF",
+                href=manual_pdf_path,
+                download="manual.pdf",
+                class_="btn btn-primary d-inline-flex align-items-center",
+                style="width: fit-content; padding: 0.35rem 0.9rem;",
+            )
+
+ui.include_css(app_dir / "styles.css")

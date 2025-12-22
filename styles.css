@@ -10,3 +10,8 @@
 .popover .btn-close {
   filter: var(--bs-btn-close-white-filter);
 }
+/* Hide Plotly modebar (toolbar) */
+.plotly .modebar,
+.js-plotly-plot .modebar {
+  display: none !important;
+}

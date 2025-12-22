@@ -39,5 +39,5 @@ earthquakes = earthquakes.dropna(subset=['magnitude', 'depth', 'latitude', 'long
 earthquakes = earthquakes.reset_index(drop=True) # Reset index after filtering
 
 # Remove unnecessary columns
-columns_to_drop = ["id",  "type", "updated", "url", "detailUrl", "status", "code", "sources", "types", "rms", "geometryType", "placeOnly", "location", "locality", "postcode", "what3words"]
+columns_to_drop = ["id",  "type", "updated", "url", "detailUrl", "status", "code", "sources", "types", "rms", "geometryType", "placeOnly", "location", "locality", "postcode", "what3words", "locationDetails"]
 earthquakes = earthquakes.drop(columns=columns_to_drop)
