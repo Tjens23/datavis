@@ -91,7 +91,7 @@ with ui.layout_columns(col_widths=[6, 6, 12]):
                 ui.input_radio_buttons(
                     "scatter_color",
                     None,
-                    ["none", "magType", "net", "status"],
+                    ["none", "magType", "net"],
                     inline=True,
                 )
 
