@@ -118,11 +118,10 @@ with ui.layout_columns(col_widths=[6, 6, 12]):
             fig, ax = plt.subplots(figsize=(10, 6))
             
             # Set up the plot limits and labels
-            ax.set_xlim(data['magnitude'].min() - 0.5, data['magnitude'].max() + 0.5)
-            ax.set_ylim(data['depth'].min() - 10, data['depth'].max() + 10)
-            ax.set_xlabel('Magnitude', fontsize=12)
-            ax.set_ylabel('Depth (km)', fontsize=12)
-            ax.invert_yaxis()  # Invert y-axis so depth increases downward
+            ax.set_xlim(data['depth'].min() - 10, data['depth'].max() + 10)
+            ax.set_ylim(data['magnitude'].min() - 0.5, data['magnitude'].max() + 0.5)
+            ax.set_xlabel('Depth (km)', fontsize=12)
+            ax.set_ylabel('Magnitude', fontsize=12)
             ax.grid(True, alpha=0.3)
             
             # Prepare color mapping
@@ -152,7 +151,7 @@ with ui.layout_columns(col_widths=[6, 6, 12]):
                 current_data = data.iloc[:idx]
                 
                 if len(current_data) > 0:
-                    scatter.set_offsets(np.c_[current_data['magnitude'], current_data['depth']])
+                    scatter.set_offsets(np.c_[current_data['depth'], current_data['magnitude']])
                     scatter.set_color([point_colors[i] for i in range(idx)])
                     
                     # Update time text
