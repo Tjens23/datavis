@@ -1,10 +1,15 @@
 import faicons as fa
 import plotly.express as px
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib.figure import Figure
+import numpy as np
 
 # Load data and compute static values
 from shared import app_dir, earthquakes
 from map import build_earthquake_map
 from shinywidgets import render_plotly
+from shinywidgets import render_widget
 
 from shiny import reactive, render
 from shiny.express import input, ui
