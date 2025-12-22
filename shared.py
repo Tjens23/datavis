@@ -24,7 +24,7 @@ earthquakes['season'] = earthquakes['season'].map(season_mapping)
 
 # Categoerize magnitude to small, medium, large in new column
 earthquakes['magnitude_category'] = pd.cut(
-    earthquakes['mag'],
+    earthquakes['magnitude'],
     bins=[-float('inf'), 4.0, 6.0, float('inf')],
     labels=['Small', 'Medium', 'Large'])
 
@@ -35,9 +35,9 @@ earthquakes['depth_category'] = pd.cut(
     labels=['Shallow', 'Intermediate', 'Deep'])
 
 # Filter out rows with missing values in key columns
-earthquakes = earthquakes.dropna(subset=['mag', 'depth', 'latitude', 'longitude'])
+earthquakes = earthquakes.dropna(subset=['magnitude', 'depth', 'latitude', 'longitude'])
 earthquakes = earthquakes.reset_index(drop=True) # Reset index after filtering
 
 # Remove unnecessary columns
-columns_to_drop = ["id",  "type", "updated", "url", "detailUrl", "status", "code", "sources", "types", "rms", "geometryType", "place", "placeOnly", "location", "locality", "postcode", "what3words"]
+columns_to_drop = ["id",  "type", "updated", "url", "detailUrl", "status", "code", "sources", "types", "rms", "geometryType", "placeOnly", "location", "locality", "postcode", "what3words"]
 earthquakes = earthquakes.drop(columns=columns_to_drop)
