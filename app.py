@@ -4,15 +4,18 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.figure import Figure
 import numpy as np
+import pandas as pd
 
 # Load data and compute static values
 from shared import app_dir, earthquakes
 from map import build_earthquake_map
+from outliers import build_outliers_infographic
 from shinywidgets import render_plotly
 from shinywidgets import render_widget
 
 from shiny import reactive, render
 from shiny.express import input, ui
+from shiny.ui import showcase_left_center
 
 # --------------------------------------------------------
 # Reactive calculations and effects
@@ -107,30 +110,36 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
 
             with ui.div(class_="d-flex flex-column gap-4 w-100"):
                 with ui.layout_columns(fill=False):
-                    with ui.value_box(showcase=ICONS["earth"], style="height: 70px"):
-                        "Total earthquakes"
+                    with ui.card(class_="px-3 py-2"):
+                        with ui.div(class_="d-flex align-items-center justify-content-between gap-3"):
+                            with ui.div():
+                                ui.p("Total earthquakes", class_="mb-0 text-muted small")
+                                @render.express
+                                def total_earthquakes():
+                                    ui.p(str(earthquake_data().shape[0]), class_="mb-0 fs-4 fw-bold")
+                            ui.div(ICONS["earth"], class_="text-primary", style="font-size: 4rem;")
 
-                        @render.express
-                        def total_earthquakes():
-                            earthquake_data().shape[0]
+                    with ui.card(class_="px-3 py-2"):
+                        with ui.div(class_="d-flex align-items-center justify-content-between gap-3"):
+                            with ui.div():
+                                ui.p("Average magnitude", class_="mb-0 text-muted small")
+                                @render.express
+                                def average_magnitude():
+                                    d = earthquake_data()
+                                    if d.shape[0] > 0:
+                                        ui.p(f"{d.magnitude.mean():.2f}", class_="mb-0 fs-4 fw-bold")
+                            ui.div(ICONS["gauge"], class_="text-primary", style="font-size: 4rem;")
 
-                    with ui.value_box(showcase=ICONS["gauge"], style="min-height: 140px"):
-                        "Average magnitude"
-
-                        @render.express
-                        def average_magnitude():
-                            d = earthquake_data()
-                            if d.shape[0] > 0:
-                                f"{d.magnitude.mean():.2f}"
-
-                    with ui.value_box(showcase=ICONS["arrows"], style="min-height: 140px"):
-                        "Average depth"
-
-                        @render.express
-                        def average_depth():
-                            d = earthquake_data()
-                            if d.shape[0] > 0:
-                                f"{d.depth.mean():.1f} km"
+                    with ui.card(class_="px-3 py-2"):
+                        with ui.div(class_="d-flex align-items-center justify-content-between gap-3"):
+                            with ui.div():
+                                ui.p("Average depth", class_="mb-0 text-muted small")
+                                @render.express
+                                def average_depth():
+                                    d = earthquake_data()
+                                    if d.shape[0] > 0:
+                                        ui.p(f"{d.depth.mean():.1f} km", class_="mb-0 fs-4 fw-bold")
+                            ui.div(ICONS["arrows"], class_="text-primary", style="font-size: 4rem;")
 
                 with ui.card(full_screen=True):
                     with ui.card_header(class_="d-flex justify-content-between align-items-center"):
@@ -143,7 +152,7 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                                 ["none", "magType", "net"],
                                 inline=True,
                             )
-
+                    """
                     @render.ui
                     def scatterplot():
                         import io
@@ -232,13 +241,22 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                         html = f'<img src="data:image/gif;base64,{gif_base64}" style="max-width:100%; height:auto;" />'
                         
                         return ui_module.HTML(html)
+                """
                 
                 with ui.card(full_screen=True, style="min-height: 600px"):
-                    ui.card_header("Earthquake map")
+                    ui.card_header(
+                        ui.h4("Earthquakes most often occur around tectonic plate boundaries", class_="mb-0"),
+                        ui.p("", class_="mb-0 text-muted small")
+                        )
                     with ui.card_body(style="height: 100%"):
                         @render_plotly
                         def earthquake_map():
                             return build_earthquake_map(earthquake_data())
+                
+                # Top Earthquakes Infographic
+                ui.h4("The outliers", class_="mb-0")
+                ui.p("The strongest earthquakes in the dataset", class_="mb-0 text-muted small")
+                build_outliers_infographic(earthquakes)
 
     with ui.nav_panel("Raw data"):
         with ui.card(full_screen=True):
