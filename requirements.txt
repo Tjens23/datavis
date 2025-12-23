@@ -7,3 +7,4 @@ ridgeplot
 kagglehub
 numpy
 matplotlib
+pillow
