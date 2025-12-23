@@ -38,6 +38,10 @@ earthquakes['depth_category'] = pd.cut(
 earthquakes = earthquakes.dropna(subset=['magnitude', 'depth', 'latitude', 'longitude'])
 earthquakes = earthquakes.reset_index(drop=True) # Reset index after filtering
 
+# Delete duplicate rows based on 'id' column
+earthquakes = earthquakes.drop_duplicates(subset=['id'])
+
+
 # Remove unnecessary columns
-columns_to_drop = ["id",  "type", "updated", "url", "detailUrl", "status", "code", "sources", "types", "rms", "geometryType", "placeOnly", "location", "locality", "postcode", "what3words", "locationDetails"]
+columns_to_drop = ["type", "updated", "url", "detailUrl", "status", "code", "sources", "types", "rms", "geometryType", "placeOnly", "location", "locality", "postcode", "what3words", "locationDetails"]
 earthquakes = earthquakes.drop(columns=columns_to_drop)
