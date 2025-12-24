@@ -1,7 +1,8 @@
+"""Outliers infographic showing top earthquakes."""
 import pandas as pd
 from shiny import ui
-from htmltools import TagList
-from helpers import get_alert_color, format_date
+
+from helpers import format_date, get_alert_color
 
 
 def build_outliers_infographic(earthquakes):
@@ -9,7 +10,7 @@ def build_outliers_infographic(earthquakes):
     # Get top 3 earthquakes by magnitude
     top_quakes = earthquakes.nlargest(3, 'magnitude').reset_index(drop=True)
     giant = top_quakes.iloc[0]
-    
+
     # Build sidebar cards
     sidebar_cards = []
     for i, quake in top_quakes.iloc[1:3].iterrows():
@@ -40,14 +41,14 @@ def build_outliers_infographic(earthquakes):
             style="flex: 1;"
         )
         sidebar_cards.append(card)
-    
+
     # Magnitude scale
     mag_percent = (giant['magnitude'] / 10) * 100
     mag_scale_html = f'''
-        <div style="background: linear-gradient(to right, #22c55e, #eab308, #f97316, #ef4444); 
+        <div style="background: linear-gradient(to right, #22c55e, #eab308, #f97316, #ef4444);
                     height: 12px; border-radius: 6px; position: relative;">
-            <div style="position: absolute; left: {mag_percent}%; top: -4px; 
-                        width: 20px; height: 20px; background: white; border: 3px solid #ef4444; 
+            <div style="position: absolute; left: {mag_percent}%; top: -4px;
+                        width: 20px; height: 20px; background: white; border: 3px solid #ef4444;
                         border-radius: 50%; transform: translateX(-50%);"></div>
         </div>
         <div class="d-flex justify-content-between mt-1">
@@ -56,11 +57,11 @@ def build_outliers_infographic(earthquakes):
             <small class="text-muted">10</small>
         </div>
     '''
-    
+
     felt = giant['felt'] if not pd.isna(giant['felt']) else 0
     alert = giant['alert'] if not pd.isna(giant['alert']) else "None"
     tsunami = "⚠️ Yes" if giant['tsunami'] == 1 else "No"
-    
+
     return ui.div(
         ui.div(
             # Main card - Biggest Earthquake (#1)

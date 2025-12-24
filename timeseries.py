@@ -1,104 +1,95 @@
-import matplotlib.pyplot as plt
-import pandas as pd
-import io
+"""Animated time series visualization for earthquake data."""
 import base64
+import io
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
 from PIL import Image
+
+matplotlib.use("Agg")
 
 
 def build_time_series_gif(data, aggregation, metric):
-    """Build an animated GIF time series chart."""
-    if len(data) == 0:
+    """Build an animated GIF showing earthquake metrics over time.
+
+    Args:
+        data: DataFrame containing earthquake data with 'datetime' column
+        aggregation: Time aggregation ('Daily', 'Weekly', 'Monthly')
+        metric: Metric to display ('Average Magnitude', 'Max Magnitude',
+                'Earthquake Count')
+
+    Returns:
+        Base64 encoded GIF string or None if no data
+    """
+    if data.empty:
         return None
-    
-    data = data.copy()
-    data = data.sort_values('datetime')
-    
-    if aggregation == "Daily":
-        data['period'] = data['datetime'].dt.date
-    elif aggregation == "Weekly":
-        data['period'] = data['datetime'].dt.to_period('W').apply(lambda x: x.start_time.date())
-    else:
-        data['period'] = data['datetime'].dt.to_period('M').apply(lambda x: x.start_time.date())
-    
+
+    df = data.copy()
+    df = df.sort_values("datetime")
+
+    freq_map = {"Daily": "D", "Weekly": "W", "Monthly": "M"}
+    freq = freq_map.get(aggregation, "W")
+    df.set_index("datetime", inplace=True)
+
     if metric == "Average Magnitude":
-        grouped = data.groupby('period')['magnitude'].mean().reset_index()
-        grouped.columns = ['period', 'value']
-        y_label = "Average Magnitude"
+        series = df["magnitude"].resample(freq).mean()
+        ylabel = "Avg Magnitude"
     elif metric == "Max Magnitude":
-        grouped = data.groupby('period')['magnitude'].max().reset_index()
-        grouped.columns = ['period', 'value']
-        y_label = "Max Magnitude"
+        series = df["magnitude"].resample(freq).max()
+        ylabel = "Max Magnitude"
     else:
-        grouped = data.groupby('period').size().reset_index()
-        grouped.columns = ['period', 'value']
-        y_label = "Number of Earthquakes"
-    
-    grouped['period'] = pd.to_datetime(grouped['period'])
-    grouped = grouped.sort_values('period').reset_index(drop=True)
-    
-    # Calculate trend line
-    window = max(3, len(grouped) // 10)
-    grouped['trend'] = grouped['value'].rolling(window=window, min_periods=1).mean()
-    
-    # Calculate bar width
-    if len(grouped) > 1:
-        bar_width = (grouped['period'].iloc[1] - grouped['period'].iloc[0]) * 0.8
-    else:
-        bar_width = pd.Timedelta(days=1)
-    
-    # Only 20 frames for fast loading
-    total_frames = min(len(grouped), 20)
-    step = max(1, len(grouped) // total_frames)
-    frame_indices = [i * step for i in range(total_frames)]
-    frame_indices.append(len(grouped) - 1)
-    
-    # Pre-render all frames as PIL images
-    frames_images = []
-    
-    x_min = grouped['period'].min() - pd.Timedelta(days=5)
-    x_max = grouped['period'].max() + pd.Timedelta(days=5)
-    y_max = grouped['value'].max() * 1.15
-    
-    for frame_idx in frame_indices:
-        fig, ax = plt.subplots(figsize=(10, 4), dpi=80)
-        
-        idx = min(frame_idx + 1, len(grouped))
-        frame_data = grouped.iloc[:idx]
-        
-        ax.bar(frame_data['period'], frame_data['value'], 
-               color='steelblue', alpha=0.7, width=bar_width)
-        ax.plot(frame_data['period'], frame_data['trend'], 
-                color='red', linewidth=2)
-        
-        ax.set_xlim(x_min, x_max)
-        ax.set_ylim(0, y_max)
-        ax.set_xlabel('Time', fontsize=10)
-        ax.set_ylabel(y_label, fontsize=10)
-        ax.set_title(f'{y_label} ({aggregation})', fontsize=12, fontweight='bold')
-        ax.grid(True, alpha=0.3)
-        fig.autofmt_xdate()
+        series = df["magnitude"].resample(freq).count()
+        ylabel = "Count"
+
+    series = series.dropna()
+    if len(series) < 2:
+        return None
+
+    dates = series.index.tolist()
+    values = series.values.tolist()
+
+    n_frames = min(len(dates), 20)
+    step = max(1, len(dates) // n_frames)
+    frame_indices = list(range(0, len(dates), step))
+    if frame_indices[-1] != len(dates) - 1:
+        frame_indices.append(len(dates) - 1)
+
+    frames = []
+    fig, ax = plt.subplots(figsize=(10, 4), dpi=80)
+
+    for idx in frame_indices:
+        ax.clear()
+        ax.bar(dates[: idx + 1], values[: idx + 1], color="#3b82f6", width=0.8)
+
+        if idx > 0:
+            x_num = np.arange(idx + 1)
+            coeffs = np.polyfit(x_num, values[: idx + 1], 1)
+            trend = np.polyval(coeffs, x_num)
+            ax.plot(dates[: idx + 1], trend, color="#ef4444", linewidth=2)
+
+        ax.set_xlim(dates[0], dates[-1])
+        ax.set_ylim(0, max(values) * 1.1)
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel("Date")
+        ax.tick_params(axis="x", rotation=45)
         plt.tight_layout()
-        
-        # Save to buffer
+
         buf = io.BytesIO()
-        fig.savefig(buf, format='png', dpi=80)
+        fig.savefig(buf, format="png")
         buf.seek(0)
-        frames_images.append(Image.open(buf).copy())
+        frames.append(Image.open(buf).copy())
         buf.close()
-        plt.close(fig)
-    
-    # Save as GIF with PIL
-    gif_buffer = io.BytesIO()
-    frames_images[0].save(
-        gif_buffer,
-        format='GIF',
+
+    plt.close(fig)
+
+    gif_buf = io.BytesIO()
+    frames[0].save(
+        gif_buf,
+        format="GIF",
         save_all=True,
-        append_images=frames_images[1:],
-        duration=120,
+        append_images=frames[1:],
+        duration=150,
         loop=0,
-        optimize=True
     )
-    gif_buffer.seek(0)
-    
-    gif_base64 = base64.b64encode(gif_buffer.getvalue()).decode('utf-8')
-    return gif_base64
+    gif_buf.seek(0)
+    return base64.b64encode(gif_buf.read()).decode("utf-8")

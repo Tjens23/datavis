@@ -1,18 +1,16 @@
 """Recent Earthquakes Dashboard - Main Application."""
-import faicons as fa
-
-from shared import app_dir, earthquakes
-from components import ICONS
-from map import build_earthquake_map
-from outliers import build_outliers_infographic
-from seasonal import build_monthly_chart
-from scatterplot import build_scatterplot
-from timeseries import build_time_series_gif
-
-from shinywidgets import render_plotly
 from shiny import reactive, render
 from shiny import ui as ui_module
 from shiny.express import input, ui
+from shinywidgets import render_plotly
+
+from components import ICONS
+from map import build_earthquake_map
+from outliers import build_outliers_infographic
+from scatterplot import build_scatterplot
+from seasonal import build_monthly_chart
+from shared import app_dir, earthquakes
+from timeseries import build_time_series_gif
 
 # =============================================================================
 # DATA RANGES & CONSTANTS
@@ -75,13 +73,13 @@ ui.page_opts(title="", fillable=False)
 # =============================================================================
 
 with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
-    
+
     # -------------------------------------------------------------------------
     # DASHBOARD TAB
     # -------------------------------------------------------------------------
     with ui.nav_panel("Dashboard"):
         with ui.layout_columns(col_widths=[3, 9], gap="lg"):
-            
+
             # Sidebar: Filters
             with ui.card(full_screen=True):
                 ui.card_header("Filters")
@@ -95,7 +93,7 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
 
             # Main content area
             with ui.div(class_="d-flex flex-column gap-4 w-100"):
-                
+
                 # Statistics cards
                 with ui.layout_columns(fill=False):
                     with ui.card(class_="px-3 py-2"):
@@ -137,7 +135,7 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                             ICONS["ellipsis"]
                             ui.input_radio_buttons("scatter_color", None,
                                 ["none", "magType", "net"], inline=True)
-                    
+
                     @render_plotly
                     def scatterplot():
                         return build_scatterplot(earthquake_data(), input.scatter_color())
@@ -162,7 +160,7 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                             ui.input_radio_buttons("time_metric", "Metric",
                                 ["Average Magnitude", "Max Magnitude", "Earthquake Count"],
                                 selected="Average Magnitude", inline=True)
-                    
+
                     @render.ui
                     def time_series_chart():
                         gif = build_time_series_gif(earthquake_data(), input.time_aggregation(), input.time_metric())
@@ -195,7 +193,7 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                 ui.input_action_button("raw_toggle",
                     f"{len(raw_columns)} of {len(raw_columns)} columns ▾",
                     class_="btn btn-link text-primary p-0")
-                
+
                 with ui.panel_conditional("input.raw_toggle % 2 === 1"):
                     ui.div(
                         {"style": "position: absolute; right: 0; top: calc(100% + 0.5rem); z-index: 2000;",
