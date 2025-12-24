@@ -1,19 +1,7 @@
 import pandas as pd
 from shiny import ui
 from htmltools import TagList
-
-
-def get_alert_color(alert):
-    """Return a color based on alert level."""
-    colors = {"green": "#22c55e", "yellow": "#eab308", "orange": "#f97316", "red": "#ef4444"}
-    return colors.get(str(alert).lower(), "#6b7280")
-
-
-def format_date(dt):
-    """Format a datetime object to a readable string."""
-    if pd.isna(dt):
-        return "Unknown"
-    return dt.strftime("%B %d, %Y")
+from helpers import get_alert_color, format_date
 
 
 def build_outliers_infographic(earthquakes):
