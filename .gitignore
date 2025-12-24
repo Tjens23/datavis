@@ -4,3 +4,5 @@ env/
 venv/
 *.pyc
 .DS_Store
+_pip_cache/
+_pip_packages/
