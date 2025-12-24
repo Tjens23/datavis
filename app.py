@@ -14,6 +14,7 @@ from PIL import Image
 from shared import app_dir, earthquakes
 from map import build_earthquake_map
 from outliers import build_outliers_infographic
+from seasonal import build_monthly_chart
 from shinywidgets import render_plotly
 from shinywidgets import render_widget
 
@@ -194,10 +195,9 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                         return fig
                 
                 with ui.card(full_screen=True, style="min-height: 600px"):
-                    ui.card_header(
-                        ui.h4("Earthquakes most often occur around tectonic plate boundaries", class_="mb-0"),
+                    with ui.card_header():
+                        ui.h4("Earthquakes most often occur around tectonic plate boundaries", class_="mb-0")
                         ui.p("", class_="mb-0 text-muted small")
-                        )
                     with ui.card_body(style="height: 100%"):
                         @render_plotly
                         def earthquake_map():
@@ -331,6 +331,17 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                 ui.h4("The outliers", class_="mb-0")
                 ui.p("The strongest earthquakes in the dataset", class_="mb-0 text-muted small")
                 build_outliers_infographic(earthquakes)
+
+                #Monthly/Seasonal distribution chart
+                with ui.card(full_screen=True, style="min-height: 500px"):
+                    with ui.card_header():
+                        with ui.div():
+                            ui.h4("Summer months see the highest earthquake activity", class_="mb-0")
+                            ui.p("July–September account for nearly half of all recorded earthquakes", class_="mb-0 text-muted small")
+                    with ui.card_body(style="height: 100%"):
+                        @render_plotly
+                        def monthly_chart():
+                            return build_monthly_chart(earthquake_data())
 
     with ui.nav_panel("Raw data"):
         with ui.card(full_screen=True):

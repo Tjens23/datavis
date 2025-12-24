@@ -11,7 +11,9 @@ path = kagglehub.dataset_download("shreyasur965/recent-earthquakes")
 csv_file = os.path.join(path, "earthquakes.csv")
 earthquakes = pd.read_csv(csv_file)
 
-# DATA PROCESSING
+# --------------------------------------------------------
+# Data processing
+# --------------------------------------------------------
 
 # Convert time to datetime (time is in milliseconds since epoch)
 earthquakes['datetime'] = pd.to_datetime(earthquakes['time'], unit='ms')
