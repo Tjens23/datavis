@@ -12,9 +12,12 @@ def build_outliers_infographic(earthquakes):
     top_depth = earthquakes.nlargest(1, 'depth').reset_index(drop=True).iloc[0]
     top_felt = earthquakes.nlargest(1, 'felt').reset_index(drop=True).iloc[0]
     
+    # The giant is the strongest earthquake
+    giant = top_magnitude
+    
     # Build sidebar cards
     sidebar_cards = []
-    for i, card in enumerate([top_magnitude, top_depth, top_felt], start=1):
+    for i, quake in enumerate([top_magnitude, top_depth, top_felt], start=1):
         if i == 1:
             title = "💥 Strongest"
         rank = i + 1

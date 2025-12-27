@@ -22,7 +22,6 @@ def build_scatterplot(data, color_var):
         labels={"magnitude": "Magnitude", "depth": "Depth (km)"},
     )
     fig.update_layout(
-        yaxis={"autorange": "reversed"},
         margin={"l": 40, "r": 20, "t": 20, "b": 40},
     )
     return fig
