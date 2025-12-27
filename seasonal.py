@@ -1,6 +1,5 @@
-import plotly.express as px
+"""Monthly and seasonal earthquake distribution chart."""
 import plotly.graph_objects as go
-import pandas as pd
 
 
 # Season colors
@@ -19,7 +18,7 @@ MONTH_TO_SEASON = {
     10: "Fall", 11: "Fall", 12: "Winter"
 }
 
-MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 
@@ -36,30 +35,30 @@ def build_monthly_chart(earthquakes):
             raise ValueError("No 'month_num', 'month', or 'datetime' column found in DataFrame.")
     if 'season' not in df.columns:
         df['season'] = df['month_num'].apply(lambda x: MONTH_TO_SEASON[x])
-    
+
     # Count earthquakes per month
     monthly_counts = df.groupby('month_num').size().reset_index(name='count')
-    
+
     # Add month names and seasons (use existing if present)
     monthly_counts['month'] = monthly_counts['month_num'].apply(lambda x: MONTH_NAMES[x-1])
     if 'season' in df.columns:
         monthly_counts['season'] = monthly_counts['month_num'].map(df.drop_duplicates('month_num').set_index('month_num')['season'])
     else:
         monthly_counts['season'] = monthly_counts['month_num'].apply(lambda x: MONTH_TO_SEASON[x])
-    
+
     # Sort by month number
     monthly_counts = monthly_counts.sort_values('month_num')
-    
+
     # Calculate seasonal totals for donut chart
     seasonal_counts = monthly_counts.groupby('season')['count'].sum().reset_index()
     # Order seasons correctly
     season_order = ["Winter", "Spring", "Summer", "Fall"]
     seasonal_counts['order'] = seasonal_counts['season'].apply(lambda x: season_order.index(x))
     seasonal_counts = seasonal_counts.sort_values('order')
-    
+
     # Create figure
     fig = go.Figure()
-    
+
     # Add bar traces
     for season in ["Winter", "Spring", "Summer", "Fall"]:
         season_data = monthly_counts[monthly_counts['season'] == season]
@@ -73,7 +72,7 @@ def build_monthly_chart(earthquakes):
             xaxis='x',
             yaxis='y'
         ))
-    
+
     # Add donut chart as a pie trace with domain positioning (inside bar chart, top left)
     fig.add_trace(go.Pie(
         labels=seasonal_counts['season'],
@@ -87,7 +86,7 @@ def build_monthly_chart(earthquakes):
         showlegend=False,
         name="Seasonal"
     ))
-    
+
     fig.update_layout(
         xaxis_title="Month",
         yaxis_title="Number of Earthquakes",
@@ -115,10 +114,10 @@ def build_monthly_chart(earthquakes):
             categoryarray=MONTH_NAMES,
             domain=[0, 1]
         ),
-        margin=dict(l=40, r=40, t=60, b=40),
+        margin={"l": 40, "r": 40, "t": 60, "b": 40},
         height=400
     )
-    
+
     # Add highlight box for Jul-Sep
     max_count = monthly_counts['count'].max()
     fig.add_vrect(
@@ -128,7 +127,7 @@ def build_monthly_chart(earthquakes):
         line_width=2,
         line_color="rgba(245, 158, 11, 0.5)",
     )
-    
+
     # Add annotation for the highlighted region
     fig.add_annotation(
         x="Aug",
@@ -137,5 +136,5 @@ def build_monthly_chart(earthquakes):
         showarrow=False,
         font=dict(size=12, color="#f59e0b", weight="bold"),
     )
-    
+
     return fig

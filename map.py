@@ -1,5 +1,7 @@
+"""Geographic earthquake map visualization."""
 import plotly.express as px
 import plotly.graph_objects as go
+
 from helpers import get_tectonic_plates
 
 
@@ -23,7 +25,7 @@ def build_earthquake_map(data, show_plates=True):
     )
 
     fig.update_traces(marker_opacity=0.8, marker=dict(sizemin=0.01))
-    
+
     # Add tectonic plate boundaries
     if show_plates:
         plates = get_tectonic_plates()
@@ -52,13 +54,12 @@ def build_earthquake_map(data, show_plates=True):
                         hoverinfo="skip",
                         showlegend=False,
                     ))
-    
+
     fig.update_layout(
-        mapbox_style="carto-positron", margin=dict(l=0, r=0, t=0, b=0),
+        mapbox_style="carto-positron",
+        margin={"l": 0, "r": 0, "t": 0, "b": 0},
         autosize=True,
         dragmode="zoom",
     )
 
     return fig
-
-

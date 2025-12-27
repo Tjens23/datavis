@@ -1,8 +1,9 @@
-from pathlib import Path
+"""Shared data loading and processing for earthquake dashboard."""
 import os
+from pathlib import Path
 
-import pandas as pd
 import kagglehub  # type: ignore
+import pandas as pd
 
 app_dir = Path(__file__).parent
 
@@ -45,5 +46,9 @@ earthquakes = earthquakes.drop_duplicates(subset=['id'])
 
 
 # Remove unnecessary columns
-columns_to_drop = ["type", "updated", "url", "detailUrl", "status", "code", "sources", "types", "rms", "geometryType", "placeOnly", "location", "locality", "postcode", "what3words", "locationDetails"]
+columns_to_drop = [
+    "type", "updated", "url", "detailUrl", "status", "code", "sources",
+    "types", "rms", "geometryType", "placeOnly", "location", "locality",
+    "postcode", "what3words", "locationDetails"
+]
 earthquakes = earthquakes.drop(columns=columns_to_drop)

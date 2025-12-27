@@ -1,6 +1,8 @@
-import pandas as pd
+"""Helper functions for earthquake dashboard."""
 import json
 import urllib.request
+
+import pandas as pd
 
 # Cache tectonic plates data
 _tectonic_plates_cache = None

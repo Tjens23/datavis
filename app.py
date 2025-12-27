@@ -1,15 +1,13 @@
-import faicons as fa
-import plotly.express as px
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from matplotlib.figure import Figure
-import numpy as np
-import pandas as pd
+"""Recent Earthquakes Dashboard - Main Application."""
+from shiny import reactive, render
+from shiny import ui as ui_module
+from shiny.express import input, ui
+from shinywidgets import render_plotly
 
-# Load data and compute static values
-from shared import app_dir, earthquakes
+from components import ICONS
 from map import build_earthquake_map
 from outliers import build_outliers_infographic
+from scatterplot import build_scatterplot
 from seasonal import build_monthly_chart
 from relation_graph import build_relation_graph
 from shinywidgets import render_plotly
@@ -19,18 +17,22 @@ from shiny import reactive, render
 from shiny.express import input, ui
 from shiny.ui import showcase_left_center
 
-# --------------------------------------------------------
-# Reactive calculations and effects
-# --------------------------------------------------------
+# =============================================================================
+# DATA RANGES & CONSTANTS
+# =============================================================================
 
 mag_rng = (earthquakes.magnitude.min(), earthquakes.magnitude.max())
 depth_rng = (earthquakes.depth.min(), earthquakes.depth.max())
-manual_pdf_path = "manual.pdf"  # Served from the app's www/ directory
 raw_columns = earthquakes.columns.tolist()
+mag_types = earthquakes.magType.unique().tolist()[:5]
 
+# =============================================================================
+# REACTIVE FUNCTIONS
+# =============================================================================
 
 @reactive.calc
 def earthquake_data():
+    """Filter earthquake data based on user inputs."""
     mag = input.magnitude()
     depth = input.depth()
     idx1 = earthquakes.magnitude.between(mag[0], mag[1])
@@ -39,14 +41,12 @@ def earthquake_data():
     return earthquakes[idx1 & idx2 & idx3]
 
 
-
-
 @reactive.effect
 @reactive.event(input.reset)
-def _():
+def _reset_filters():
     ui.update_slider("magnitude", value=mag_rng)
     ui.update_slider("depth", value=depth_rng)
-    ui.update_checkbox_group("mag_type", selected=earthquakes.magType.unique().tolist()[:5])
+    ui.update_checkbox_group("mag_type", selected=mag_types)
 
 
 @reactive.effect
@@ -64,53 +64,42 @@ def _clear_all_raw_columns():
 @reactive.effect
 def _update_raw_toggle_label():
     sel = list(input.raw_columns() or raw_columns)
-    ui.update_action_button("raw_toggle", label=f"{len(sel)} of {len(raw_columns)} columns \u25be")
+    ui.update_action_button("raw_toggle", label=f"{len(sel)} of {len(raw_columns)} columns ▾")
 
 
-# --------------------------------------------------------
+# =============================================================================
+# PAGE CONFIGURATION
+# =============================================================================
 
-# Add page title
 ui.page_opts(title="", fillable=False)
 
-ICONS = {
-    "earth": fa.icon_svg("earth-americas"),
-    "gauge": fa.icon_svg("gauge-high"),
-    "arrows": fa.icon_svg("arrows-down-to-people"),
-    "ellipsis": fa.icon_svg("ellipsis"),
-    "chevron": fa.icon_svg("chevron-down"),
-}
+# =============================================================================
+# NAVIGATION & LAYOUT
+# =============================================================================
 
 with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
+
+    # -------------------------------------------------------------------------
+    # DASHBOARD TAB
+    # -------------------------------------------------------------------------
     with ui.nav_panel("Dashboard"):
         with ui.layout_columns(col_widths=[3, 9], gap="lg"):
+
+            # Sidebar: Filters
             with ui.card(full_screen=True):
                 ui.card_header("Filters")
-                ui.input_slider(
-                    "magnitude",
-                    "Magnitude",
-                    min=mag_rng[0],
-                    max=mag_rng[1],
-                    value=mag_rng,
-                    step=0.1,
-                )
-                ui.input_slider(
-                    "depth",
-                    "Depth (km)",
-                    min=depth_rng[0],
-                    max=depth_rng[1],
-                    value=depth_rng,
-                    step=1,
-                )
-                ui.input_checkbox_group(
-                    "mag_type",
-                    "Magnitude Type",
-                    earthquakes.magType.unique().tolist()[:5],
-                    selected=earthquakes.magType.unique().tolist()[:5],
-                    inline=True,
-                )
+                ui.input_slider("magnitude", "Magnitude",
+                    min=mag_rng[0], max=mag_rng[1], value=mag_rng, step=0.1)
+                ui.input_slider("depth", "Depth (km)",
+                    min=depth_rng[0], max=depth_rng[1], value=depth_rng, step=1)
+                ui.input_checkbox_group("mag_type", "Magnitude Type",
+                    mag_types, selected=mag_types, inline=True)
                 ui.input_action_button("reset", "Reset filter")
 
+            # Main content area
             with ui.div(class_="d-flex flex-column gap-4 w-100"):
+
+                # Statistics cards
                 with ui.layout_columns(fill=False):
                     with ui.card(class_="px-3 py-2"):
                         with ui.div(class_="d-flex align-items-center justify-content-between gap-3"):
@@ -143,6 +132,7 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                                         ui.p(f"{d.depth.mean():.1f} km", class_="mb-0 fs-4 fw-bold")
                             ui.div(ICONS["arrows"], class_="text-primary", style="font-size: 4rem;")
 
+                # Scatter plot: Magnitude vs Depth
                 with ui.card(full_screen=True):
                     with ui.card_header(class_="d-flex justify-content-between align-items-center"):
                         "Magnitude vs Depth"
@@ -248,7 +238,6 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                 with ui.card(full_screen=True, style="min-height: 600px"):
                     with ui.card_header():
                         ui.h4("Earthquakes most often occur around tectonic plate boundaries", class_="mb-0")
-                        ui.p("", class_="mb-0 text-muted small")
                     with ui.card_body(style="height: 100%"):
                         @render_plotly
                         def earthquake_map():
@@ -259,12 +248,11 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                 ui.p("The strongest earthquakes in the dataset", class_="mb-0 text-muted small")
                 build_outliers_infographic(earthquakes)
 
-                #Monthly/Seasonal distribution chart
+                # Monthly distribution chart
                 with ui.card(full_screen=True, style="min-height: 500px"):
                     with ui.card_header():
-                        with ui.div():
-                            ui.h4("Summer months see the highest earthquake activity", class_="mb-0")
-                            ui.p("July–September account for nearly half of all recorded earthquakes", class_="mb-0 text-muted small")
+                        ui.h4("Summer months see the highest earthquake activity", class_="mb-0")
+                        ui.p("July–September account for nearly half of all recorded earthquakes", class_="mb-0 text-muted small")
                     with ui.card_body(style="height: 100%"):
                         @render_plotly
                         def monthly_chart():
@@ -272,53 +260,44 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                 
                 
 
+    # -------------------------------------------------------------------------
+    # RAW DATA TAB
+    # -------------------------------------------------------------------------
     with ui.nav_panel("Raw data"):
         with ui.card(full_screen=True):
             with ui.card_header(class_="d-flex justify-content-between align-items-center", style="position: relative;"):
                 "Raw data (unfiltered)"
-                ui.input_action_button(
-                    "raw_toggle",
-                    f"{len(raw_columns)} of {len(raw_columns)} columns \u25be",
-                    class_="btn btn-link text-primary p-0",
-                )
+                ui.input_action_button("raw_toggle",
+                    f"{len(raw_columns)} of {len(raw_columns)} columns ▾",
+                    class_="btn btn-link text-primary p-0")
+
                 with ui.panel_conditional("input.raw_toggle % 2 === 1"):
                     ui.div(
-                        {
-                            "style": "position: absolute; right: 0; top: calc(100% + 0.5rem); z-index: 2000;",
-                            "class": "shadow-sm border bg-white p-3 rounded-3",
-                        },
+                        {"style": "position: absolute; right: 0; top: calc(100% + 0.5rem); z-index: 2000;",
+                         "class": "shadow-sm border bg-white p-3 rounded-3"},
                         ui.div(
                             ui.input_action_button("raw_select_all_btn", "Select all", class_="btn btn-sm btn-outline-primary"),
                             ui.input_action_button("raw_clear_all_btn", "Clear", class_="btn btn-sm btn-outline-secondary"),
-                            class_="d-flex gap-2 mb-2",
-                        ),
+                            class_="d-flex gap-2 mb-2"),
                         ui.div(
-                            ui.input_checkbox_group(
-                                "raw_columns",
-                                None,
-                                choices=raw_columns,
-                                selected=raw_columns,
-                                inline=False,
-                            ),
-                            style="max-height: 240px; width: 260px; overflow-y: auto;",
-                        ),
-                    )
+                            ui.input_checkbox_group("raw_columns", None, choices=raw_columns, selected=raw_columns, inline=False),
+                            style="max-height: 240px; width: 260px; overflow-y: auto;"))
 
             @render.data_frame
             def raw_table():
                 cols = list(input.raw_columns() or raw_columns)
                 return render.DataGrid(earthquakes[cols])
-    
+
+    # -------------------------------------------------------------------------
+    # MANUAL TAB
+    # -------------------------------------------------------------------------
     with ui.nav_panel("Manual"):
         with ui.card(full_screen=False):
             ui.card_header("Download manual")
             ui.markdown("Get the PDF version of the manual below.")
-            ui.tags.a(
-                "Download PDF",
-                href=manual_pdf_path,
-                download="manual.pdf",
+            ui.tags.a("Download PDF", href="manual.pdf", download="manual.pdf",
                 class_="btn btn-primary d-inline-flex align-items-center",
-                style="width: fit-content; padding: 0.35rem 0.9rem;",
-            )
+                style="width: fit-content; padding: 0.35rem 0.9rem;")
 
+# Include custom styles
 ui.include_css(app_dir / "styles.css")
