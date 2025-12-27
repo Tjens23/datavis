@@ -8,7 +8,8 @@ from helpers import get_tectonic_plates
 def build_earthquake_map(data, show_plates=True):
     """Return a Plotly mapbox figure for the given earthquake DataFrame."""
     if data.empty:
-        return px.scatter_mapbox(lat=[], lon=[], zoom=1)
+        fig = px.scatter_mapbox(lat=[], lon=[], zoom=1)
+        return fig
 
     fig = px.scatter_mapbox(
         data,
@@ -54,12 +55,47 @@ def build_earthquake_map(data, show_plates=True):
                         hoverinfo="skip",
                         showlegend=False,
                     ))
+<<<<<<< HEAD
 
     fig.update_layout(
         mapbox_style="carto-positron",
         margin={"l": 0, "r": 0, "t": 0, "b": 0},
+=======
+        # Add legend entry for tectonic plate boundary (dummy trace)
+        fig.add_trace(go.Scattermapbox(
+            lon=[None, None],
+            lat=[None, None],
+            mode="lines",
+            line=dict(width=2, color="rgba(255, 100, 100, 0.6)"),
+            name="Tectonic plate boundary",
+            showlegend=True,
+            hoverinfo="skip",
+            visible=True,
+            legendgroup="tectonic",
+            legendrank=100
+        ))
+        # Add padding to legend
+        fig.update_layout(
+            legend=dict(
+                itemsizing='constant',
+                yanchor='top',
+                y=0.98,
+                xanchor='left',
+                x=0.01,
+                bgcolor='rgba(255,255,255,0.8)',
+                bordercolor='rgba(0,0,0,0.1)',
+                borderwidth=1,
+                font=dict(size=12),
+                title_font=dict(size=13),
+            )
+        )
+    
+    fig.update_layout(
+        mapbox_style="carto-positron",
+        margin=dict(l=0, r=0, t=0, b=0),
+>>>>>>> f016f53 (heatmap distribution and scatterplot matrix)
         autosize=True,
-        dragmode="zoom",
+        dragmode="zoom"
     )
 
     return fig

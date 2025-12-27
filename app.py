@@ -9,7 +9,8 @@ from map import build_earthquake_map
 from outliers import build_outliers_infographic
 from scatterplot import build_scatterplot
 from seasonal import build_monthly_chart
-from relation_graph import build_relation_graph
+from heatmap import build_mag_depth_heatmap
+from scatter_matrix import build_scatterplot_matrix
 from shinywidgets import render_plotly
 from shinywidgets import render_widget
 
@@ -144,7 +145,7 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                                 ["none", "magType", "net"],
                                 inline=True,
                             )
-                    
+                    """
                     @render.ui
                     def scatterplot():
                         import io
@@ -233,19 +234,19 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                         html = f'<img src="data:image/gif;base64,{gif_base64}" style="max-width:100%; height:auto;" />'
                         
                         return ui_module.HTML(html)
-                
+                """
                 # Earthquake Map
                 with ui.card(full_screen=True, style="min-height: 600px"):
                     with ui.card_header():
-                        ui.h4("Earthquakes most often occur around tectonic plate boundaries", class_="mb-0")
+                        ui.h4("Earthquakes most often occur around tectonic plate boundaries", class_="mb-0", style="margin-bottom:0;margin-top:0;")
                     with ui.card_body(style="height: 100%"):
                         @render_plotly
                         def earthquake_map():
                             return build_earthquake_map(earthquake_data())
                 
                 # Outlier Earthquakes Infographic
-                ui.h4("The outliers", class_="mb-0")
-                ui.p("The strongest earthquakes in the dataset", class_="mb-0 text-muted small")
+                ui.h4("The Outliers", class_="mb-0", style="margin-bottom:0;")
+                ui.p("The outlier earthquakes in the dataset", class_="mb-0 text-muted small", style="margin-top:-20px;margin-bottom:0;")
                 build_outliers_infographic(earthquakes)
 
                 # Monthly distribution chart
@@ -257,12 +258,28 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                         @render_plotly
                         def monthly_chart():
                             return build_monthly_chart(earthquake_data())
-                
+
+                # Heatmap and Scatterplot Matrix side by side
+                with ui.div(style="display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; width: 100%;"):
+                    with ui.card(full_screen=True, style="width: 440px; height: 560px; margin: 0 1rem 0 0;"):
+                        with ui.card_header():
+                            with ui.div():
+                                ui.h4("Most events are small to medium magnitude with shallow depth", class_="mb-0")
+                        with ui.card_body(style="height: 100%"):
+                            @render_plotly
+                            def mag_depth_heatmap():
+                                return build_mag_depth_heatmap(earthquake_data())
+
+                    with ui.card(full_screen=True, style="width: 440px; height: 560px;"):
+                        with ui.card_header():
+                            with ui.div():
+                                ui.h4("Pairwise relations between magnitude, depth, and felt reports", class_="mb-0")
+                        with ui.card_body(style="height: 100%"):
+                            @render_plotly
+                            def scatter_matrix_plot():
+                                return build_scatterplot_matrix(earthquake_data())
                 
 
-    # -------------------------------------------------------------------------
-    # RAW DATA TAB
-    # -------------------------------------------------------------------------
     with ui.nav_panel("Raw data"):
         with ui.card(full_screen=True):
             with ui.card_header(class_="d-flex justify-content-between align-items-center", style="position: relative;"):
