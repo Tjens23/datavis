@@ -10,8 +10,16 @@
 .popover .btn-close {
   filter: var(--bs-btn-close-white-filter);
 }
+
 /* Hide Plotly modebar (toolbar) */
 .plotly .modebar,
 .js-plotly-plot .modebar {
   display: none !important;
+}
+
+/* Force flexbox for the card body containing the heatmap and scatterplot matrix */
+.side-by-side-card .card-body {
+  display: flex !important;
+  gap: 1rem;
+  align-items: stretch;
 }
