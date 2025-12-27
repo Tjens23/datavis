@@ -11,6 +11,7 @@ from shared import app_dir, earthquakes
 from map import build_earthquake_map
 from outliers import build_outliers_infographic
 from seasonal import build_monthly_chart
+from relation_graph import build_relation_graph
 from shinywidgets import render_plotly
 from shinywidgets import render_widget
 
@@ -153,7 +154,7 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                                 ["none", "magType", "net"],
                                 inline=True,
                             )
-                    """
+                    
                     @render.ui
                     def scatterplot():
                         import io
@@ -242,8 +243,8 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                         html = f'<img src="data:image/gif;base64,{gif_base64}" style="max-width:100%; height:auto;" />'
                         
                         return ui_module.HTML(html)
-                """
                 
+                # Earthquake Map
                 with ui.card(full_screen=True, style="min-height: 600px"):
                     with ui.card_header():
                         ui.h4("Earthquakes most often occur around tectonic plate boundaries", class_="mb-0")
@@ -253,7 +254,7 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                         def earthquake_map():
                             return build_earthquake_map(earthquake_data())
                 
-                # Top Earthquakes Infographic
+                # Outlier Earthquakes Infographic
                 ui.h4("The outliers", class_="mb-0")
                 ui.p("The strongest earthquakes in the dataset", class_="mb-0 text-muted small")
                 build_outliers_infographic(earthquakes)
@@ -268,6 +269,8 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                         @render_plotly
                         def monthly_chart():
                             return build_monthly_chart(earthquake_data())
+                
+                
 
     with ui.nav_panel("Raw data"):
         with ui.card(full_screen=True):
