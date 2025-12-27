@@ -14,22 +14,15 @@ from scatter_matrix import build_scatterplot_matrix
 from shinywidgets import render_plotly
 from shinywidgets import render_widget
 
+from shared import app_dir, earthquakes
 from shiny import reactive, render
 from shiny.express import input, ui
 from shiny.ui import showcase_left_center
-
-# =============================================================================
-# DATA RANGES & CONSTANTS
-# =============================================================================
 
 mag_rng = (earthquakes.magnitude.min(), earthquakes.magnitude.max())
 depth_rng = (earthquakes.depth.min(), earthquakes.depth.max())
 raw_columns = earthquakes.columns.tolist()
 mag_types = earthquakes.magType.unique().tolist()[:5]
-
-# =============================================================================
-# REACTIVE FUNCTIONS
-# =============================================================================
 
 @reactive.calc
 def earthquake_data():
@@ -243,8 +236,9 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                 # Monthly distribution chart
                 with ui.card(full_screen=True, style="min-height: 500px"):
                     with ui.card_header():
-                        ui.h4("Summer months see the highest earthquake activity", class_="mb-0")
-                        ui.p("July–September account for nearly half of all recorded earthquakes", class_="mb-0 text-muted small")
+                        with ui.div():
+                            ui.h4("Summer months see the highest earthquake activity", class_="mb-0")
+                            ui.p("July–September account for nearly half of all recorded earthquakes", class_="mb-0 text-muted small")
                     with ui.card_body(style="height: 100%"):
                         @render_plotly
                         def monthly_chart():
@@ -296,9 +290,6 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                 cols = list(input.raw_columns() or raw_columns)
                 return render.DataGrid(earthquakes[cols])
 
-    # -------------------------------------------------------------------------
-    # MANUAL TAB
-    # -------------------------------------------------------------------------
     with ui.nav_panel("Manual"):
         with ui.card(full_screen=False):
             ui.card_header("Download manual")

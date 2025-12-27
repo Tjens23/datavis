@@ -67,19 +67,6 @@ def build_outliers_infographic(earthquakes):
                 f" {quake['magnitude']:.1f}",
                 class_="text-muted"
             ),
-<<<<<<< HEAD
-            ui.div(
-                ui.tags.small(f"👥 {quake_felt:,} felt", class_="text-muted"),
-                ui.tags.small("⚠️ ", class_="text-muted"),
-                ui.span(str(quake_alert).upper(), class_="badge small", style=f"background-color: {get_alert_color(quake_alert)};"),
-                ui.tags.small(f"🌊 {quake_tsunami}", class_="text-muted"),
-                class_="d-flex gap-3 align-items-center", style="line-height: 1.2;"
-            ),
-            style="flex: 1;"
-        )
-        sidebar_cards.append(card)
-
-=======
             class_="d-flex gap-3", style="line-height: 1.2;"
         ),
         ui.div(
@@ -93,7 +80,6 @@ def build_outliers_infographic(earthquakes):
     )
     sidebar_cards.append(card_felt)
     
->>>>>>> f016f53 (heatmap distribution and scatterplot matrix)
     # Magnitude scale
     mag_percent = (giant['magnitude'] / 10) * 100
     mag_scale_html = f'''

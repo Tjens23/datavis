@@ -55,12 +55,6 @@ def build_earthquake_map(data, show_plates=True):
                         hoverinfo="skip",
                         showlegend=False,
                     ))
-<<<<<<< HEAD
-
-    fig.update_layout(
-        mapbox_style="carto-positron",
-        margin={"l": 0, "r": 0, "t": 0, "b": 0},
-=======
         # Add legend entry for tectonic plate boundary (dummy trace)
         fig.add_trace(go.Scattermapbox(
             lon=[None, None],
@@ -93,7 +87,6 @@ def build_earthquake_map(data, show_plates=True):
     fig.update_layout(
         mapbox_style="carto-positron",
         margin=dict(l=0, r=0, t=0, b=0),
->>>>>>> f016f53 (heatmap distribution and scatterplot matrix)
         autosize=True,
         dragmode="zoom"
     )
