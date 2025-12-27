@@ -1,9 +1,13 @@
 """Recent Earthquakes Dashboard - Main Application."""
+import matplotlib.pyplot as plt
+import numpy as np
+
 from shiny import reactive, render
 from shiny import ui as ui_module
 from shiny.express import input, ui
 from shinywidgets import render_plotly
 
+from shared import app_dir, earthquakes
 from components import ICONS
 from map import build_earthquake_map
 from outliers import build_outliers_infographic
