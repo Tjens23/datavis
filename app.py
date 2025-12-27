@@ -15,6 +15,7 @@ from scatterplot import build_scatterplot
 from seasonal import build_monthly_chart
 from heatmap import build_mag_depth_heatmap
 from scatter_matrix import build_scatterplot_matrix
+from timeseries import build_time_series_gif
 from shinywidgets import render_plotly
 from shinywidgets import render_widget
 
@@ -121,108 +122,23 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                                         ui.p(f"{d.depth.mean():.1f} km", class_="mb-0 fs-4 fw-bold")
                             ui.div(ICONS["arrows"], class_="text-primary", style="font-size: 4rem;")
 
-                # Scatter plot: Magnitude vs Depth
-                with ui.card(full_screen=True):
+                                # Time Series Animation
+                with ui.card(full_screen=True, style="min-height: 500px"):
                     with ui.card_header(class_="d-flex justify-content-between align-items-center"):
-                        "Magnitude vs Depth"
-                        with ui.popover(title="Add a color variable", placement="top"):
-                            ICONS["ellipsis"]
-                            ui.input_radio_buttons(
-                                "scatter_color",
-                                None,
-                                ["none", "magType", "net"],
-                                inline=True,
-                            )
-                    """
-                    @render.ui
-                    def scatterplot():
-                        import io
-                        import base64
-                        from shiny import ui as ui_module
-                        
-                        data = earthquake_data()
-                        color_var = input.scatter_color()
-                        
-                        if len(data) == 0:
-                            return ui_module.HTML("<p>No data to display</p>")
-                        
-                        # Sort data by datetime for animation
-                        data = data.sort_values('datetime').reset_index(drop=True)
-                        
-                        fig, ax = plt.subplots(figsize=(10, 6))
-                        
-                        # Set up the plot limits and labels
-                        ax.set_xlim(data['magnitude'].min() - 0.5, data['magnitude'].max() + 0.5)
-                        ax.set_ylim(data['depth'].min() - 10, data['depth'].max() + 10)
-                        ax.set_xlabel('Magnitude', fontsize=12)
-                        ax.set_ylabel('Depth (km)', fontsize=12)
-                        ax.grid(True, alpha=0.3)
-                        
-                        # Prepare color mapping
-                        if color_var != "none" and color_var in data.columns:
-                            unique_vals = data[color_var].unique()
-                            colors = plt.cm.viridis(np.linspace(0, 1, len(unique_vals)))
-                            color_map = dict(zip(unique_vals, colors))
-                            point_colors = [color_map[val] for val in data[color_var]]
-                            
-                            # Add legend
-                            for i, val in enumerate(unique_vals):
-                                ax.scatter([], [], c=[colors[i]], label=str(val), s=50)
-                            ax.legend(loc='upper right', fontsize=8)
-                        else:
-                            point_colors = ['#1f77b4'] * len(data)
-                        
-                        # Initialize scatter plot
-                        scatter = ax.scatter([], [], alpha=0.6, s=50)
-                        time_text = ax.text(0.02, 0.98, '', transform=ax.transAxes, 
-                                          fontsize=10, verticalalignment='top',
-                                          bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-                        
-                        # Animation function
-                        def animate(frame):
-                            # Show earthquakes up to this frame
-                            idx = min(frame * 5, len(data))  # Show 5 points per frame
-                            current_data = data.iloc[:idx]
-                            
-                            if len(current_data) > 0:
-                                scatter.set_offsets(np.c_[current_data['magnitude'], current_data['depth']])
-                                scatter.set_color([point_colors[i] for i in range(idx)])
-                                
-                                # Update time text
-                                latest_time = current_data['datetime'].iloc[-1]
-                                time_text.set_text(f'Up to: {latest_time.strftime("%Y-%m-%d %H:%M")}')
-                            
-                            return scatter, time_text
-                        
-                        # Create animation
-                        frames = min(len(data) // 5 + 1, 100)  # Limit to 100 frames max
-                        anim = animation.FuncAnimation(fig, animate, frames=frames,
-                                                     interval=100, blit=True, repeat=True)
-                        
-                        plt.tight_layout()
-                        
-                        # Save animation as GIF to a temporary file
-                        import tempfile
-                        with tempfile.NamedTemporaryFile(delete=False, suffix='.gif') as tmp:
-                            tmp_path = tmp.name
-                        
-                        anim.save(tmp_path, writer='pillow', fps=10, dpi=100)
-                        plt.close(fig)
-                        
-                        # Read the GIF file and encode as base64
-                        with open(tmp_path, 'rb') as f:
-                            gif_data = f.read()
-                        
-                        # Clean up temp file
-                        import os
-                        os.unlink(tmp_path)
-                        
-                        # Encode as base64 and embed in img tag
-                        gif_base64 = base64.b64encode(gif_data).decode('utf-8')
-                        html = f'<img src="data:image/gif;base64,{gif_base64}" style="max-width:100%; height:auto;" />'
-                        
-                        return ui_module.HTML(html)
-                """
+                        with ui.div():
+                            ui.h4("Earthquake activity over time", class_="mb-0")
+                            ui.p("Animated visualization of earthquake trends", class_="mb-0 text-muted small")
+                        with ui.div(class_="d-flex gap-2"):
+                            ui.input_select("ts_aggregation", None, ["Daily", "Weekly", "Monthly"], selected="Weekly")
+                            ui.input_select("ts_metric", None, ["Average Magnitude", "Max Magnitude", "Earthquake Count"], selected="Earthquake Count")
+                    with ui.card_body(style="height: 100%"):
+                        @render.ui
+                        def time_series_chart():
+                            gif_data = build_time_series_gif(earthquake_data(), input.ts_aggregation(), input.ts_metric())
+                            if gif_data:
+                                return ui_module.HTML(f'<img src="data:image/gif;base64,{gif_data}" style="max-width:100%; height:auto;" />')
+                            return ui_module.HTML("<p>Not enough data for time series</p>")
+          
                 # Earthquake Map
                 with ui.card(full_screen=True, style="min-height: 600px"):
                     with ui.card_header():
@@ -247,7 +163,25 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                         @render_plotly
                         def monthly_chart():
                             return build_monthly_chart(earthquake_data())
-
+                        
+                                  
+                # Scatter plot: Magnitude vs Depth
+                with ui.card(full_screen=True):
+                    with ui.card_header(class_="d-flex justify-content-between align-items-center"):
+                        "Magnitude vs Depth"
+                        with ui.popover(title="Add a color variable", placement="top"):
+                            ICONS["ellipsis"]
+                            ui.input_radio_buttons(
+                                "scatter_color",
+                                None,
+                                ["none", "magType", "net"],
+                                inline=True,
+                            )
+            
+                    @render_plotly
+                    def scatterplot():
+                        return build_scatterplot(earthquake_data(), input.scatter_color())
+                    
                 # Heatmap and Scatterplot Matrix side by side
                 with ui.div(style="display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; width: 100%;"):
                     with ui.card(full_screen=True, style="width: 440px; height: 560px; margin: 0 1rem 0 0;"):
@@ -267,6 +201,8 @@ with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
                             @render_plotly
                             def scatter_matrix_plot():
                                 return build_scatterplot_matrix(earthquake_data())
+                    
+
                 
 
     with ui.nav_panel("Raw data"):

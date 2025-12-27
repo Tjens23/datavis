@@ -54,18 +54,25 @@ def build_time_series_gif(data, aggregation, metric):
     if frame_indices[-1] != len(dates) - 1:
         frame_indices.append(len(dates) - 1)
 
+    # Calculate bar width based on frequency
+    if len(dates) > 1:
+        time_delta = (dates[-1] - dates[0]) / len(dates)
+        bar_width = time_delta * 0.8
+    else:
+        bar_width = 1
+
     frames = []
     fig, ax = plt.subplots(figsize=(10, 4), dpi=80)
 
     for idx in frame_indices:
         ax.clear()
-        ax.bar(dates[: idx + 1], values[: idx + 1], color="#3b82f6", width=0.8)
+        ax.bar(dates[: idx + 1], values[: idx + 1], color="#3b82f6", width=bar_width)
 
-        if idx > 0:
-            x_num = np.arange(idx + 1)
-            coeffs = np.polyfit(x_num, values[: idx + 1], 1)
-            trend = np.polyval(coeffs, x_num)
-            ax.plot(dates[: idx + 1], trend, color="#ef4444", linewidth=2)
+        if idx > 2:
+            # Smooth moving average trend line that follows bar tops
+            window = min(5, idx + 1)
+            smoothed = np.convolve(values[: idx + 1], np.ones(window)/window, mode='same')
+            ax.plot(dates[: idx + 1], smoothed, color="#ef4444", linewidth=2.5, linestyle='-')
 
         ax.set_xlim(dates[0], dates[-1])
         ax.set_ylim(0, max(values) * 1.1)
