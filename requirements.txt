@@ -5,6 +5,4 @@ plotly
 pandas
 ridgeplot
 kagglehub
-numpy
-matplotlib
-pillow
+

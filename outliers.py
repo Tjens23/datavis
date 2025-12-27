@@ -7,13 +7,16 @@ from helpers import format_date, get_alert_color
 
 def build_outliers_infographic(earthquakes):
     """Build the top earthquakes infographic UI components."""
-    # Get top 3 earthquakes by magnitude
-    top_quakes = earthquakes.nlargest(3, 'magnitude').reset_index(drop=True)
-    giant = top_quakes.iloc[0]
-
+    # Get the top earthquake outliers
+    top_magnitude = earthquakes.nlargest(1, 'magnitude').reset_index(drop=True).iloc[0]
+    top_depth = earthquakes.nlargest(1, 'depth').reset_index(drop=True).iloc[0]
+    top_felt = earthquakes.nlargest(1, 'felt').reset_index(drop=True).iloc[0]
+    
     # Build sidebar cards
     sidebar_cards = []
-    for i, quake in top_quakes.iloc[1:3].iterrows():
+    for i, card in enumerate([top_magnitude, top_depth, top_felt], start=1):
+        if i == 1:
+            title = "💥 Strongest"
         rank = i + 1
         color = ["#f97316", "#eab308", "#22c55e"][i-1] if i <= 3 else "#6b7280"
         quake_felt = int(quake['felt']) if not pd.isna(quake['felt']) else 0
@@ -68,8 +71,8 @@ def build_outliers_infographic(earthquakes):
             ui.card(
                 ui.div(
                     ui.div(
-                        ui.p("🏆 THE BIGGEST EARTHQUAKE", class_="text-muted small fw-bold mb-0", style="letter-spacing: 2px; font-size: 0.7rem;"),
-                        ui.h2(f"M {giant['magnitude']:.1f}", class_="fw-bold mb-0", style="color: #ef4444;"),
+                        ui.p("🏆 THE LARGEST EARTHQUAKE", class_="text-muted small fw-bold mb-0", style="letter-spacing: 2px; font-size: 0.7rem;"),
+                        ui.h2(f"MAGNITUDE {giant['magnitude']:.1f}", class_="fw-bold mb-0", style="color: #ef4444;"),
                     ),
                     ui.div(
                         ui.span("#1", class_="badge bg-danger small px-2 py-1"),
