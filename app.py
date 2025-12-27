@@ -68,21 +68,12 @@ def _update_raw_toggle_label():
     ui.update_action_button("raw_toggle", label=f"{len(sel)} of {len(raw_columns)} columns ▾")
 
 
-# =============================================================================
-# PAGE CONFIGURATION
-# =============================================================================
 
 ui.page_opts(title="", fillable=False)
 
-# =============================================================================
-# NAVIGATION & LAYOUT
-# =============================================================================
-
 with ui.navset_bar(title="Recent Earthquakes", id="tabs"):
 
-    # -------------------------------------------------------------------------
     # DASHBOARD TAB
-    # -------------------------------------------------------------------------
     with ui.nav_panel("Dashboard"):
         with ui.layout_columns(col_widths=[3, 9], gap="lg"):
 
